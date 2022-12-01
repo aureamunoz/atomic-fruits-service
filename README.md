@@ -151,3 +151,46 @@ The other, and equivalent, approach is to use maven command:
 ````shell script
 mvn clean package -Dquarkus.kubernetes.deploy=true
 ````
+
+So far, we have no secret to keep the database credentials. Let's do something about it.
+
+
+## Create and deploy a secret with data base credentials
+
+Create a new file `src/main/kubernetes/fruits-database-secret.yml` and paste the following content: 
+
+````yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fruits-database-secret
+stringData:
+  user: luke
+  password: secret
+````
+
+Now let's add the environment variables we need to connect to the database
+````properties
+%prod.quarkus.kubernetes.env.mapping.db-username.from-secret=fruits-database-secret
+%prod.quarkus.kubernetes.env.mapping.db-username.with-key=user
+%prod.quarkus.kubernetes.env.mapping.db-password.from-secret=fruits-database-secret
+%prod.quarkus.kubernetes.env.mapping.db-password.with-key=password
+````
+
+Then, replace database related properties with these:
+
+````properties
+%prod.quarkus.datasource.username = ${DB_USERNAME}
+%prod.quarkus.datasource.password = ${DB_PASSWORD}
+````
+
+Deploy the secret first, then redeploy the application: 
+
+````shell script
+kubectl apply -f src/main/kubernetes/fruits-database-secret.yml
+kubectl apply -f target/kubernetes/kubernetes.yml
+
+````
+
+If everything went well, you should be able to access the atomic-fruits service using a browser to [http://atomic-fruits.127.0.0.1.nip.io/fruit](http://atomic-fruits.127.0.0.1.nip.io/fruit)
