@@ -1,5 +1,7 @@
 # atomic-fruits-service Project
 
+Simple project exposing and endpoint REST to access Fruit entity.
+
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
@@ -47,29 +49,15 @@ You can then execute your native executable with: `./target/atomic-fruits-servic
 
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
 
-## Provided Code
+## Add a Data Base to our application
+Deploy a PostgreSQL data base using helm
 
-### RESTEasy Reactive
-
-Easily start your Reactive RESTful Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
-
-
-mvn io.quarkus:quarkus-maven-plugin:2.14.2.Final:create \
--DprojectGroupId="com.redhat.atomic.fruit" \
--DprojectArtifactId="atomic-fruits-service" \
--DprojectVersion="1.0-SNAPSHOT" \
--DclassName="FruitResource" \
--Dpath="fruits"
-
-oc new-app -e POSTGRESQL_USER=luke -e POSTGRESQL_PASSWORD=secret -e POSTGRESQL_DATABASE=my_data centos/postgresql-10-centos7 --name=my-database -n user1-fruit-service
-
+```shell script
 helm install postgresql bitnami/postgresql --version 11.9.1 \
 --set auth.database=my_data \
 --set auth.username=luke \
---set auth.password=secret \
---create-namespace -n fruits
+--set auth.password=secret 
+
 
 NAME: postgresql
 LAST DEPLOYED: Tue Nov 29 17:32:58 2022
@@ -108,14 +96,58 @@ To connect to your database from outside the cluster execute the following comma
     kubectl port-forward --namespace fruits svc/postgresql 5432:5432 &
     PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U luke -d my_data -p 5432
 
-mkdir -p src/main/kubernetes && \
-cat <<EOF > src/main/kubernetes/kubernetes.yml
----
-apiVersion: v1
-kind: Secret
-metadata:
-name: fruits-database-secret
-stringData:
-user: luke
-password: secret
-EOF
+```
+
+Then configure the application according to the data base installed: 
+
+````properties
+%prod.quarkus.datasource.jdbc.url = jdbc:postgresql://postgresql.fruits.svc.cluster.local:5432/my_data
+%prod.quarkus.datasource.db-kind=postgresql
+%prod.quarkus.datasource.username = luke
+%prod.quarkus.datasource.password = secret
+````
+
+# Deploy the application in a Kubernetes cluster
+
+We will use a local docker registry and a kind cluster with it enabled.
+
+Customize the container build strategy according to your owns by adding the convenient properties to the `application.properties` file:
+
+```properties
+quarkus.container-image.registry=127.0.0.1:5000
+quarkus.container-image.image=localhost:5000/amunozhe/atomic-fruits:1.0.0
+quarkus.container-image.name=atomic-fruits
+quarkus.container-image.group=amunozhe
+quarkus.container-image.tag=1.0.0
+quarkus.container-image.insecure=true
+```
+
+These properties use the local docker registry already mentioned.
+
+Add this couple of properties to `application.properties` so that we trust on the CA cert and expose our application via Ingress.
+
+```properties
+quarkus.kubernetes-client.trust-certs=true
+quarkus.kubernetes.ingress.expose=true
+quarkus.kubernetes.ingress.host=atomic-fruits.127.0.0.1.nip.io
+```
+
+Package the application and build and push the container image
+
+```shell script
+./mvnw clean package -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true
+```
+
+You can check the generated file target/kubernetes/kubernetes.yml, there you'll find: Service, Deployment and Ingress resources.
+
+Finally, deploy the application by running:
+
+````shell script
+kubectl apply -f target/kubernetes/kubernetes.yml
+````
+
+The other, and equivalent, approach is to use maven command:
+
+````shell script
+mvn clean package -Dquarkus.kubernetes.deploy=true
+````
