@@ -101,7 +101,7 @@ To connect to your database from outside the cluster execute the following comma
 Then configure the application according to the data base installed: 
 
 ````properties
-%prod.quarkus.datasource.jdbc.url = jdbc:postgresql://postgresql.fruits.svc.cluster.local:5432/my_data
+%prod.quarkus.datasource.jdbc.url = jdbc:postgresql://postgresql.default:5432/my_data
 %prod.quarkus.datasource.db-kind=postgresql
 %prod.quarkus.datasource.username = luke
 %prod.quarkus.datasource.password = secret
