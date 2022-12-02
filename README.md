@@ -54,14 +54,14 @@ Deploy a PostgreSQL data base using helm
 
 ```shell script
 helm install postgresql bitnami/postgresql --version 11.9.1 \
---set auth.database=my_data \
---set auth.username=luke \
---set auth.password=secret 
-
+--set auth.database=fruits_database \
+--set auth.username=healthy \
+--set auth.password=healthy \
+--create-namespace -n grocery 
 
 NAME: postgresql
-LAST DEPLOYED: Tue Nov 29 17:32:58 2022
-NAMESPACE: fruits
+LAST DEPLOYED: Fri Dec  2 10:02:45 2022
+NAMESPACE: grocery
 STATUS: deployed
 REVISION: 1
 TEST SUITE: None
@@ -74,37 +74,37 @@ APP VERSION: 14.5.0
 
 PostgreSQL can be accessed via port 5432 on the following DNS names from within your cluster:
 
-    postgresql.fruits.svc.cluster.local - Read/Write connection
+    postgresql.grocery.svc.cluster.local - Read/Write connection
 
 To get the password for "postgres" run:
 
-    export POSTGRES_ADMIN_PASSWORD=$(kubectl get secret --namespace fruits postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
+    export POSTGRES_ADMIN_PASSWORD=$(kubectl get secret --namespace grocery postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
 
-To get the password for "luke" run:
+To get the password for "healthy" run:
 
-    export POSTGRES_PASSWORD=$(kubectl get secret --namespace fruits postgresql -o jsonpath="{.data.password}" | base64 -d)
+    export POSTGRES_PASSWORD=$(kubectl get secret --namespace grocery postgresql -o jsonpath="{.data.password}" | base64 -d)
 
 To connect to your database run the following command:
 
-    kubectl run postgresql-client --rm --tty -i --restart='Never' --namespace fruits --image docker.io/bitnami/postgresql:14.5.0-debian-11-r14 --env="PGPASSWORD=$POSTGRES_PASSWORD" \
-      --command -- psql --host postgresql -U luke -d my_data -p 5432
+    kubectl run postgresql-client --rm --tty -i --restart='Never' --namespace grocery --image docker.io/bitnami/postgresql:14.5.0-debian-11-r14 --env="PGPASSWORD=$POSTGRES_PASSWORD" \
+      --command -- psql --host postgresql -U healthy -d fruits_database -p 5432
 
     > NOTE: If you access the container using bash, make sure that you execute "/opt/bitnami/scripts/postgresql/entrypoint.sh /bin/bash" in order to avoid the error "psql: local user with ID 1001} does not exist"
 
 To connect to your database from outside the cluster execute the following commands:
 
-    kubectl port-forward --namespace fruits svc/postgresql 5432:5432 &
-    PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U luke -d my_data -p 5432
+    kubectl port-forward --namespace grocery svc/postgresql 5432:5432 &
+    PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U healthy -d fruits_database -p 5432
 
 ```
 
 Then configure the application according to the data base installed: 
 
 ````properties
-%prod.quarkus.datasource.jdbc.url = jdbc:postgresql://postgresql.default:5432/my_data
-%prod.quarkus.datasource.db-kind=postgresql
-%prod.quarkus.datasource.username = luke
-%prod.quarkus.datasource.password = secret
+%prod.quarkus.datasource.jdbc.url = jdbc:postgresql://postgresql.grocery:5432/fruits_database
+%prod.quarkus.datasource.db-kind = postgresql
+%prod.quarkus.datasource.username = healthy
+%prod.quarkus.datasource.password = healthy
 ````
 
 # Deploy the application in a Kubernetes cluster
@@ -166,8 +166,8 @@ kind: Secret
 metadata:
   name: fruits-database-secret
 stringData:
-  user: luke
-  password: secret
+  user: healthy
+  password: healthy
 ````
 
 Now let's add the environment variables we need to connect to the database
