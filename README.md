@@ -50,7 +50,7 @@ You can then execute your native executable with: `./target/atomic-fruits-servic
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
 
 ## Add a Data Base to our application
-Deploy a PostgreSQL data base using helm
+Deploy a PostgreSQL database using helm
 
 ```shell script
 helm install postgresql bitnami/postgresql --version 11.9.1 \
@@ -98,7 +98,9 @@ To connect to your database from outside the cluster execute the following comma
 
 ```
 
-Then configure the application according to the data base installed: 
+Then configure the application to access the database installed. There are a few possibilities that are described in the following sections.
+
+## Set up the credentials directly in the datasource configuration
 
 ````properties
 %prod.quarkus.datasource.jdbc.url = jdbc:postgresql://postgresql.grocery:5432/fruits_database
@@ -106,6 +108,49 @@ Then configure the application according to the data base installed:
 %prod.quarkus.datasource.username = healthy
 %prod.quarkus.datasource.password = healthy
 ````
+
+Now you can jump to the [Deploy the application in a Kubernetes cluster](#Deploy the application in a Kubernetes cluster) section.
+
+## Get the database credentials from a secret.
+
+### Create and deploy a secret with database credentials
+
+We have no secret to keep the database credentials. Let's do something about it. Create a new file `src/main/kubernetes/fruits-database-secret.yml` and paste the following content:
+
+````yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fruits-database-secret
+stringData:
+  user: healthy
+  password: healthy
+````
+
+Deploy the secret:
+
+````shell script
+kubectl apply -f src/main/kubernetes/fruits-database-secret.yml
+````
+
+Now let's add the environment variables we need to connect to the database
+````properties
+%prod.quarkus.kubernetes.env.mapping.db-username.from-secret=fruits-database-secret
+%prod.quarkus.kubernetes.env.mapping.db-username.with-key=user
+%prod.quarkus.kubernetes.env.mapping.db-password.from-secret=fruits-database-secret
+%prod.quarkus.kubernetes.env.mapping.db-password.with-key=password
+````
+
+Then, replace database related properties with these:
+
+````properties
+%prod.quarkus.datasource.username = ${DB_USERNAME}
+%prod.quarkus.datasource.password = ${DB_PASSWORD}
+````
+
+Now you can jump to the [Deploy the application in a Kubernetes cluster](#Deploy the application in a Kubernetes cluster) section.
+
 
 # Deploy the application in a Kubernetes cluster
 
@@ -150,47 +195,6 @@ The other, and equivalent, approach is to use maven command:
 
 ````shell script
 mvn clean package -Dquarkus.kubernetes.deploy=true
-````
-
-So far, we have no secret to keep the database credentials. Let's do something about it.
-
-
-## Create and deploy a secret with data base credentials
-
-Create a new file `src/main/kubernetes/fruits-database-secret.yml` and paste the following content: 
-
-````yaml
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: fruits-database-secret
-stringData:
-  user: healthy
-  password: healthy
-````
-
-Now let's add the environment variables we need to connect to the database
-````properties
-%prod.quarkus.kubernetes.env.mapping.db-username.from-secret=fruits-database-secret
-%prod.quarkus.kubernetes.env.mapping.db-username.with-key=user
-%prod.quarkus.kubernetes.env.mapping.db-password.from-secret=fruits-database-secret
-%prod.quarkus.kubernetes.env.mapping.db-password.with-key=password
-````
-
-Then, replace database related properties with these:
-
-````properties
-%prod.quarkus.datasource.username = ${DB_USERNAME}
-%prod.quarkus.datasource.password = ${DB_PASSWORD}
-````
-
-Deploy the secret first, then redeploy the application: 
-
-````shell script
-kubectl apply -f src/main/kubernetes/fruits-database-secret.yml
-kubectl apply -f target/kubernetes/kubernetes.yml
-
 ````
 
 If everything went well, you should be able to access the atomic-fruits service using a browser to [http://atomic-fruits.127.0.0.1.nip.io/fruit](http://atomic-fruits.127.0.0.1.nip.io/fruit)

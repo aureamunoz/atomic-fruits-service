@@ -17,7 +17,7 @@ import javax.ws.rs.core.UriBuilder;
 import org.jboss.logging.Logger; // logging
 import org.eclipse.microprofile.config.inject.ConfigProperty; // custom property
 
-@Path("/fruit")
+@Path("/fruits")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class FruitResource {
