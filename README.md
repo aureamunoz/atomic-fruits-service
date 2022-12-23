@@ -198,3 +198,14 @@ mvn clean package -Dquarkus.kubernetes.deploy=true
 ````
 
 If everything went well, you should be able to access the atomic-fruits service using a browser to [http://atomic-fruits.127.0.0.1.nip.io/fruit](http://atomic-fruits.127.0.0.1.nip.io/fruit)
+
+Using Primaza
+
+Install DB
+Deploy atomic-fruits without datasource configuration
+In Primaza:
+- Register DB service
+- Create credential with healthy/healthy
+- Create Claim
+- Go to Applications and try to bind the atomic fruits app.
+
