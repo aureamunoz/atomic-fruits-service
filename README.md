@@ -49,8 +49,36 @@ You can then execute your native executable with: `./target/atomic-fruits-servic
 
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
 
-## Add a Data Base to our application
-Deploy a PostgreSQL database using helm
+Next, we are going to deploy the atomic-fruit-service in a Kubernetes cluster.
+
+
+# Set up a local Kubernetes environment with KinD
+
+### Install Kind
+
+[kind](https://github.com/kubernetes-sigs/kind) is a tool for running local Kubernetes clusters using Docker container “nodes”.
+kind was primarily designed for testing Kubernetes itself, but may be used for local development or CI.
+
+Install Kind following the [site instructions](https://kind.sigs.k8s.io/docs/user/quick-start/#installation).
+
+### Create a cluster
+
+Now, you can create a cluster by running the following command:
+
+````shell
+bash <(curl -s -L https://raw.githubusercontent.com/snowdrop/k8s-infra/main/kind/kind-reg-ingress.sh)
+````
+
+This script creates a Kubernetes cluster using kind tool and deploys a private docker registry and Ingress controller NGINX to route the traffic.
+
+Then, create a namespace to deploy the application and database. You can do it as follows:
+
+````shell
+kubectl create namespace grocery
+````
+
+## Adding a Data Base to our application
+Deploy a PostgreSQL database in the cluster using helm
 
 ```shell script
 helm install postgresql bitnami/postgresql --version 11.9.1 \
@@ -98,9 +126,11 @@ To connect to your database from outside the cluster execute the following comma
 
 ```
 
-Then configure the application to access the database installed. There are a few possibilities that are described in the following sections.
+Then configure the application to access the database installed. 
 
-## Set up the credentials directly in the datasource configuration
+There are a few possibilities that are described in the following sections.
+
+## Set up the credentials directly in application.properties file 
 
 ````properties
 %prod.quarkus.datasource.jdbc.url = jdbc:postgresql://postgresql.grocery:5432/fruits_database
@@ -109,11 +139,11 @@ Then configure the application to access the database installed. There are a few
 %prod.quarkus.datasource.password = healthy
 ````
 
-Now you can jump to the [Deploy the application in a Kubernetes cluster](#Deploy the application in a Kubernetes cluster) section.
+Now you can jump to the [Deploy the application in a Kubernetes cluster](#deploy-the-application-in-a-Kubernetes-cluster) section.
 
-## Get the database credentials from a secret.
+## Getting the database credentials from an existing secret.
 
-### Create and deploy a secret with database credentials
+### Create and deploy a secret in the cluster with database credentials
 
 We have no secret to keep the database credentials. Let's do something about it. Create a new file `src/main/kubernetes/fruits-database-secret.yml` and paste the following content:
 
@@ -128,13 +158,13 @@ stringData:
   password: healthy
 ````
 
-Deploy the secret:
+Deploy the secret in the cluster:
 
 ````shell script
 kubectl apply -f src/main/kubernetes/fruits-database-secret.yml
 ````
 
-Now let's add the environment variables we need to connect to the database
+Now let's add the environment variables to the application.properties file in order to connect to the database
 ````properties
 %prod.quarkus.kubernetes.env.mapping.db-username.from-secret=fruits-database-secret
 %prod.quarkus.kubernetes.env.mapping.db-username.with-key=user
@@ -149,10 +179,10 @@ Then, replace database related properties with these:
 %prod.quarkus.datasource.password = ${DB_PASSWORD}
 ````
 
-Now you can jump to the [Deploy the application in a Kubernetes cluster](#Deploy the application in a Kubernetes cluster) section.
+Now you can jump to the [Deploy the application in a Kubernetes cluster](#deploy-the-application-in-a-Kubernetes-cluster) section.
 
 
-# Deploy the application in a Kubernetes cluster
+# Deploy the application in the cluster
 
 We will use a local docker registry and a kind cluster with it enabled.
 
@@ -201,9 +231,9 @@ If everything went well, you should be able to access the atomic-fruits service 
 
 Using Primaza
 
-Install DB
-Deploy atomic-fruits without datasource configuration
-In Primaza:
+Install DB following [these instructions](##Adding-a-Data-Base-to-our-application) 
+Deploy atomic-fruits **without** datasource configuration by following [this section](#Deploy-the-application-in-the-cluster)
+Then, in Primaza:
 - Register DB service
 - Create credential with healthy/healthy
 - Create Claim
